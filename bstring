@@ -1,0 +1,138 @@
+#ifndef BSTR
+#define BSTR
+
+#include<stdlib.h>
+#include<assert.h>
+#include<string>
+#include<string.h>//for strlen
+
+using namespace std;
+
+class bstr_value;
+class bstring;
+
+class bstr_value{
+	private:
+		bstring *ref;
+	public:
+		bool value;
+		
+		bstr_value(bstring *r):value(0),ref(r){}
+		
+		int& operator=(bool a);
+		int& operator=(bstr_value a);
+		
+		operator int(){
+			return (int)value;
+		}
+		
+		operator bool(){
+			return !!value;
+		}
+		
+};
+
+
+class bstring{
+		
+	public:
+		char *str;
+		int size,length;
+		int position;
+		bstr_value val;
+		
+		bstring(bstring &s):str(0),size(s.size),length(s.length),position(0),val(this)
+		{
+			str=(char*)malloc(s.size);
+			//str[s.size]='\0';//to enable this statement size should be size+1
+			for(int i=0;i<s.size;i++)
+				str[i]=s.str[i];
+		}
+		
+		bstring(int len=1):str(0),size(len%(sizeof(char)*8)==0?(len/(sizeof(char)*8)):(len/(sizeof(char)*8)+1)),length(len),position(0),val(this)
+		{
+			str=(char*)malloc(size);
+			//str[size]='\0';
+		}
+		
+		bstring(char *seq):str(0),size(strlen(seq)%(sizeof(char)*8)==0?(strlen(seq)/(sizeof(char)*8)):(strlen(seq)/(sizeof(char)*8)+1)),length(strlen(seq)),position(0),val(this)
+		{
+			str=(char*)malloc(size);
+			set_bits(seq,0);
+		}
+		
+		void set_bits(char *sequence,int position_start){
+			//position is from LEFT end and STARTS from 0
+			for(short i=position_start;sequence[i-position_start]!='\0';i++){
+				assert(i<length);
+				operator[](i)=(sequence[i-position_start]-48);
+			}
+		}		
+		
+		string get_seq(){
+			string s="";
+			char c;
+			for(int i=0;i<length;i++){
+				c=((*this)[i]+48);
+				s.append(1,c);
+			}
+			return s;
+		}
+		
+		void flush(){
+			assert(val==0 || val==1);
+			short block=0;
+			while(position>=8){
+				block++;
+				position-=8;
+			}
+			if(!val)
+				((char*)str)[block] &= ~(((char)1)<<(7-position));
+			else
+				((char*)str)[block] |= (((char)1)<<(7-position));
+		}
+		
+		bstr_value &operator[](int n){
+			int block=n/(sizeof(char)*8);
+			val.value=(((char*)str)[block] & ( ((char)1)<<(7-(n-8*block)) ));
+			position=n;
+			assert( position < length );
+			return val;
+		}
+		
+		bstring &operator=(const bstring& s){
+			if(size!=s.size)
+				str=(char*)realloc(str,s.size);
+			//str[s.size]='\0';
+			size=s.size;
+			length=s.length;
+			for(int i=0;i<s.size;i++)
+				str[i]=s.str[i];
+		}
+		
+		operator string(){
+			return get_seq();
+		}
+		
+		~bstring(){
+			free(str);
+		}
+};
+
+int& bstr_value::operator=(bool a){
+	if(value!=a){
+		value=a;
+		ref->flush();
+	}
+}
+
+int& bstr_value::operator=(bstr_value a){
+	if(value!=a.value){
+		value=a.value;
+		ref->flush();
+	}
+}
+
+
+
+#endif

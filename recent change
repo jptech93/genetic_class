@@ -1,0 +1,10 @@
+In Population->
+Added parameter chromosome<T> * to rw_select and rank_select and therefore changed their call in renew...
+
+In Chromosome->
+fitness changed to double from float...
+
+In class bstring->
+changed s.append(char*) to s.append(size n,char) in string get_seq()
+Was giving garbage values instead of 1's and 0's (since it expected the char pointer to terminate in \0)
+started working after change..
